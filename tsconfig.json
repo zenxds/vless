@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "baseUrl": "./",
+    "target": "ES2018",
+    "experimentalDecorators": true,
+    "module": "commonjs",
+    "declaration": true,
+    "outDir": "./lib",
+    "removeComments": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": [
+    "./src/**/*.ts",
+    "./test/**/*.spec.ts"
+  ]
+}
