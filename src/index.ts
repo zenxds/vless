@@ -19,7 +19,7 @@ const KEY_FILE = process.env.KEY_FILE || ''
 const isHttps = CERT_FILE && KEY_FILE
 
 const app = express()
-app.use('/static', express.static(path.join(__dirname, 'static')))
+app.use('/static', express.static(path.join(__dirname, '../static')))
 
 const server = isHttps
   ? https.createServer(
