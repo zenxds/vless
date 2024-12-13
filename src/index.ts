@@ -1,10 +1,12 @@
 // https://xtls.github.io/development/protocols/vless.html
 import 'dotenv/config'
 import net from 'net'
+import path from 'path'
 import * as http from 'http'
 import * as https from 'https'
 import { readFileSync } from 'fs'
 import { WebSocketServer, createWebSocketStream } from 'ws'
+import express from 'express'
 
 import { log, parseVLESS, closeWebSocket, closeNetSocket } from './utils'
 
@@ -16,12 +18,18 @@ const KEY_FILE = process.env.KEY_FILE || ''
 
 const isHttps = CERT_FILE && KEY_FILE
 
+const app = express()
+app.use('/static', express.static(path.join(__dirname, 'static')))
+
 const server = isHttps
-  ? https.createServer({
-      cert: readFileSync(CERT_FILE),
-      key: readFileSync(KEY_FILE),
-    })
-  : http.createServer()
+  ? https.createServer(
+      {
+        cert: readFileSync(CERT_FILE),
+        key: readFileSync(KEY_FILE),
+      },
+      app,
+    )
+  : http.createServer(app)
 const wsServer = new WebSocketServer({ noServer: true })
 
 wsServer.on('connection', ws => {
