@@ -94,29 +94,25 @@ export function parseVLESS(buffer: Buffer) {
 }
 
 export function closeNetSocket(socket: net.Socket, err?: boolean) {
-  if (err && !socket.destroyed) {
-    socket.destroy()
+  if (socket.destroyed) {
     return
   }
 
-  if (socket.writable) {
+  if (err) {
+    socket.destroy()
+  } else if (socket.writable) {
     socket.end()
   }
 }
 
 export function closeWebSocket(socket: WebSocket, err?: boolean) {
-  if (
-    socket.readyState === WebSocket.CLOSED ||
-    socket.readyState === WebSocket.CLOSING
-  ) {
+  if (socket.readyState !== WebSocket.OPEN) {
     return
   }
 
-  if (socket.readyState === WebSocket.OPEN) {
-    if (err) {
-      socket.terminate()
-    } else {
-      socket.close()
-    }
+  if (err) {
+    socket.terminate()
+  } else {
+    socket.close()
   }
 }

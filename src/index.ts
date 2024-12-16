@@ -41,15 +41,17 @@ wsServer.on('connection', ws => {
       return
     }
 
-    ws.send(new Uint8Array([info.version, 0]))
-
     const targetSocket = net.createConnection({
       host: info.targetAddress,
       port: info.targetPort,
     })
 
     targetSocket.once('connect', () => {
+      ws.send(new Uint8Array([info.version, 0]))
       targetSocket.write(info.data)
+
+      const duplexStream = createWebSocketStream(ws)
+      duplexStream.pipe(targetSocket)
     })
 
     // 转发目标服务器的数据回 WebSocket 客户端
@@ -61,8 +63,8 @@ wsServer.on('connection', ws => {
       targetSocket.destroy(err)
     })
 
-    targetSocket.on('close', hadError => {
-      closeWebSocket(ws, hadError)
+    targetSocket.on('close', hasError => {
+      closeWebSocket(ws, hasError)
     })
 
     ws.on('error', () => {
@@ -72,9 +74,6 @@ wsServer.on('connection', ws => {
     ws.on('close', () => {
       closeNetSocket(targetSocket)
     })
-
-    const duplexStream = createWebSocketStream(ws)
-    duplexStream.pipe(targetSocket)
   })
 })
 
