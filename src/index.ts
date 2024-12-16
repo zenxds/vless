@@ -57,16 +57,16 @@ wsServer.on('connection', ws => {
       ws.send(chunk)
     })
 
-    targetSocket.on('error', () => {
-      closeWebSocket(ws, true)
+    targetSocket.on('error', err => {
+      targetSocket.destroy(err)
     })
 
-    targetSocket.on('close', () => {
-      closeWebSocket(ws)
+    targetSocket.on('close', hadError => {
+      closeWebSocket(ws, hadError)
     })
 
     ws.on('error', () => {
-      closeNetSocket(targetSocket, true)
+      ws.close()
     })
 
     ws.on('close', () => {
