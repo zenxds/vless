@@ -1,4 +1,5 @@
 import net from 'net'
+import stream from 'stream'
 import WebSocket from 'ws'
 
 export function log(type: 'log' | 'info' | 'error', ...args: string[]) {
@@ -93,7 +94,10 @@ export function parseVLESS(buffer: Buffer) {
   }
 }
 
-export function closeNetSocket(socket: net.Socket, err?: boolean) {
+export function closeNetSocket(
+  socket: net.Socket | stream.Duplex,
+  err?: boolean,
+) {
   if (socket.destroyed) {
     return
   }

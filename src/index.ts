@@ -8,7 +8,7 @@ import { readFileSync } from 'fs'
 import { WebSocketServer, createWebSocketStream } from 'ws'
 import express from 'express'
 
-import { log, parseVLESS, closeWebSocket, closeNetSocket } from './utils'
+import { log, parseVLESS, closeNetSocket } from './utils'
 
 const UUID = process.env.UUID || ''
 const PORT = Number(process.env.PORT || 3000)
@@ -45,33 +45,31 @@ wsServer.on('connection', ws => {
       host: info.targetAddress,
       port: info.targetPort,
     })
+    const duplexStream = createWebSocketStream(ws)
 
     targetSocket.once('connect', () => {
       ws.send(new Uint8Array([info.version, 0]))
       targetSocket.write(info.data)
 
-      const duplexStream = createWebSocketStream(ws)
       duplexStream.pipe(targetSocket)
+      targetSocket.pipe(duplexStream)
     })
 
-    // 转发目标服务器的数据回 WebSocket 客户端
-    targetSocket.on('data', chunk => {
-      ws.send(chunk)
+    targetSocket.on('error', () => {
+      closeNetSocket(targetSocket, true)
+      closeNetSocket(duplexStream, true)
     })
 
-    targetSocket.on('error', err => {
-      targetSocket.destroy(err)
+    duplexStream.on('error', () => {
+      closeNetSocket(duplexStream, true)
+      closeNetSocket(targetSocket, true)
     })
 
     targetSocket.on('close', hasError => {
-      closeWebSocket(ws, hasError)
+      closeNetSocket(duplexStream, hasError)
     })
 
-    ws.on('error', () => {
-      ws.close()
-    })
-
-    ws.on('close', () => {
+    duplexStream.on('close', () => {
       closeNetSocket(targetSocket)
     })
   })
