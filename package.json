@@ -8,6 +8,7 @@
     "compile": "tsc --build tsconfig.build.json && tsc-alias --project tsconfig.build.json",
     "lint": "eslint src/**/*.ts",
     "prettier": "prettier src/**/*.ts --write",
+    "docker:build": "docker build -t zenxds/vless:latest .",
     "test": "jest ."
   },
   "husky": {
@@ -52,6 +53,7 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "pm2": "^5.4.3",
     "ws": "^8.18.0"
   }
 }
