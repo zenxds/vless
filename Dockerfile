@@ -12,4 +12,4 @@ COPY . $APP_DIR
 
 EXPOSE 19594
 
-CMD ["pm2-runtime", "ecosystem.config.js"]
+CMD ["npm", "run", "docker:start"]

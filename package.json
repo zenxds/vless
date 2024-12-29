@@ -9,6 +9,7 @@
     "lint": "eslint src/**/*.ts",
     "prettier": "prettier src/**/*.ts --write",
     "docker:build": "docker build -t zenxds/vless:latest .",
+    "docker:start": "pm2-runtime ecosystem.config.js",
     "test": "jest ."
   },
   "husky": {
