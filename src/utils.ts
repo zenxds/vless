@@ -1,6 +1,6 @@
 import net from 'net'
 import stream from 'stream'
-import WebSocket from 'ws'
+// import WebSocket from 'ws'
 
 export function log(type: 'log' | 'info' | 'error', ...args: string[]) {
   console[type](`[${new Date().toISOString()}] ${type.toUpperCase()}:`, ...args)
@@ -109,14 +109,14 @@ export function closeNetSocket(
   }
 }
 
-export function closeWebSocket(socket: WebSocket, err?: boolean) {
-  if (socket.readyState !== WebSocket.OPEN) {
-    return
-  }
+// export function closeWebSocket(socket: WebSocket, err?: boolean) {
+//   if (socket.readyState !== WebSocket.OPEN) {
+//     return
+//   }
 
-  if (err) {
-    socket.terminate()
-  } else {
-    socket.close()
-  }
-}
+//   if (err) {
+//     socket.terminate()
+//   } else {
+//     socket.close()
+//   }
+// }
