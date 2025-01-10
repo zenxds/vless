@@ -55,14 +55,6 @@ wsServer.on('connection', ws => {
       targetSocket.pipe(duplexStream)
     })
 
-    // targetSocket.on('end', () => {
-    //   closeNetSocket(duplexStream)
-    // })
-
-    // duplexStream.on('end', () => {
-    //   closeNetSocket(targetSocket)
-    // })
-
     targetSocket.on('close', hasError => {
       closeNetSocket(duplexStream, hasError)
     })
