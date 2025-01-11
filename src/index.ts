@@ -10,7 +10,7 @@ import express from 'express'
 
 import { log, parseVLESS, closeNetSocket } from './utils'
 
-const UUID = process.env.UUID || ''
+const UUID = (process.env.UUID || '').replace(/-/g, '')
 const PORT = Number(process.env.PORT || 3000)
 const WS_PATH = process.env.WS_PATH || '/'
 const CERT_FILE = process.env.CERT_FILE || ''
