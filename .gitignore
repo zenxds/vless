@@ -70,3 +70,4 @@ typings/
 package-lock.json
 
 lib/
+ecosystem.config.js

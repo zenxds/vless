@@ -6,6 +6,6 @@ export default tseslint.config(
   tseslint.configs.recommended,
 
   {
-    ignores: ['ecosystem.config.example'],
+    ignores: ['ecosystem.config.example.js'],
   },
 )
