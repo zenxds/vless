@@ -5,18 +5,23 @@ import path from 'path'
 import * as http from 'http'
 import * as https from 'https'
 import { readFileSync } from 'fs'
-import { WebSocketServer, createWebSocketStream } from 'ws'
+import { RawData, WebSocketServer, createWebSocketStream } from 'ws'
 import express from 'express'
 
-import { log, parseVLESS, closeNetSocket } from './utils'
+import {
+  log,
+  parseVLESS,
+  closeNetSocket,
+  isAllowedUpgradePath,
+  isSupportedCommand,
+  resolveServerConfig,
+} from './utils'
 
-const UUID = (process.env.UUID || '').replace(/-/g, '')
-const PORT = Number(process.env.PORT || 3000)
-const WS_PATH = process.env.WS_PATH || '/'
-const CERT_FILE = process.env.CERT_FILE || ''
-const KEY_FILE = process.env.KEY_FILE || ''
+const HANDSHAKE_TIMEOUT_MS = 10_000
+const TARGET_SOCKET_TIMEOUT_MS = 30_000
+const MAX_HANDSHAKE_PAYLOAD_BYTES = 64 * 1024
 
-const isHttps = CERT_FILE && KEY_FILE
+const { uuid, port, wsPath, certFile, keyFile, isHttps } = resolveServerConfig(process.env)
 
 const app = express()
 app.use('/static', express.static(path.join(__dirname, '../static')))
@@ -24,20 +29,57 @@ app.use('/static', express.static(path.join(__dirname, '../static')))
 const server = isHttps
   ? https.createServer(
       {
-        cert: readFileSync(CERT_FILE),
-        key: readFileSync(KEY_FILE),
+        cert: readFileSync(certFile),
+        key: readFileSync(keyFile),
       },
       app,
     )
   : http.createServer(app)
-const wsServer = new WebSocketServer({ noServer: true })
+const wsServer = new WebSocketServer({
+  noServer: true,
+  maxPayload: MAX_HANDSHAKE_PAYLOAD_BYTES,
+})
+
+function toBuffer(data: RawData) {
+  if (Buffer.isBuffer(data)) {
+    return data
+  }
+
+  if (Array.isArray(data)) {
+    return Buffer.concat(data)
+  }
+
+  return Buffer.from(data)
+}
 
 wsServer.on('connection', ws => {
-  ws.once('message', (msg: Buffer) => {
-    const info = parseVLESS(msg)
+  const handshakeTimeout = setTimeout(() => {
+    ws.close(1008, 'Handshake timeout')
+  }, HANDSHAKE_TIMEOUT_MS)
 
-    if (info.uuid !== UUID) {
-      ws.close()
+  ws.once('close', () => {
+    clearTimeout(handshakeTimeout)
+  })
+
+  ws.once('message', (msg: RawData) => {
+    clearTimeout(handshakeTimeout)
+
+    let info: ReturnType<typeof parseVLESS>
+    try {
+      info = parseVLESS(toBuffer(msg))
+    } catch (error) {
+      log('error', error instanceof Error ? error.message : 'Invalid VLESS request')
+      ws.close(1008, 'Invalid VLESS request')
+      return
+    }
+
+    if (info.uuid !== uuid) {
+      ws.close(1008, 'Unauthorized UUID')
+      return
+    }
+
+    if (!isSupportedCommand(info.command)) {
+      ws.close(1003, 'Unsupported VLESS command')
       return
     }
 
@@ -45,11 +87,15 @@ wsServer.on('connection', ws => {
       host: info.targetAddress,
       port: info.targetPort,
     })
+    targetSocket.setTimeout(TARGET_SOCKET_TIMEOUT_MS)
+
     const duplexStream = createWebSocketStream(ws)
 
     targetSocket.once('connect', () => {
       ws.send(new Uint8Array([info.version, 0]))
-      targetSocket.write(info.data)
+      if (info.data.length > 0) {
+        targetSocket.write(info.data)
+      }
 
       duplexStream.pipe(targetSocket)
       targetSocket.pipe(duplexStream)
@@ -68,6 +114,11 @@ wsServer.on('connection', ws => {
       closeNetSocket(duplexStream, true)
     })
 
+    targetSocket.on('timeout', () => {
+      closeNetSocket(targetSocket, true)
+      closeNetSocket(duplexStream, true)
+    })
+
     duplexStream.on('error', () => {
       closeNetSocket(duplexStream, true)
       closeNetSocket(targetSocket, true)
@@ -76,18 +127,20 @@ wsServer.on('connection', ws => {
 })
 
 server.on('upgrade', function upgrade(request, socket, head) {
-  const { pathname } = new URL(request.url || '', 'wss://base.url')
-
-  if (pathname === WS_PATH) {
+  if (isAllowedUpgradePath(request.url, wsPath)) {
     wsServer.handleUpgrade(request, socket, head, function done(ws) {
       wsServer.emit('connection', ws, request)
     })
+    return
   }
+
+  socket.destroy()
 })
 
-server.listen(PORT, () => {
+server.listen(port, () => {
+  const maskedUuid = `${uuid.slice(0, 8)}...${uuid.slice(-4)}`
   log(
     'info',
-    `${isHttps ? 'https' : 'http'} server started on port ${PORT} with UUID ${UUID}`,
+    `${isHttps ? 'https' : 'http'} server started on port ${port} with UUID ${maskedUuid}`,
   )
 })
