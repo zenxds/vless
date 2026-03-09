@@ -1,14 +1,27 @@
-FROM node:18-alpine
+FROM node:20-alpine AS build
 
-ENV APP_DIR=/home/node
+ENV APP_DIR=/app
 
-WORKDIR $APP_DIR
+WORKDIR ${APP_DIR}
 
-COPY yarn.lock package.json $APP_DIR/
+COPY package.json yarn.lock tsconfig.json tsconfig.build.json ./
+RUN yarn install --frozen-lockfile
 
-RUN yarn install --production && yarn cache clean
+COPY src ./src
+RUN yarn compile
 
-COPY . $APP_DIR
+FROM node:20-alpine AS runtime
+
+ENV NODE_ENV=production
+ENV APP_DIR=/app
+
+WORKDIR ${APP_DIR}
+
+COPY package.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production=true && yarn cache clean
+
+COPY ecosystem.config.example.js ./ecosystem.config.js
+COPY --from=build /app/lib ./lib
 
 EXPOSE 19594
 
