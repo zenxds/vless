@@ -24,6 +24,9 @@ const MAX_HANDSHAKE_PAYLOAD_BYTES = 64 * 1024
 const { uuid, port, wsPath, certFile, keyFile, isHttps } = resolveServerConfig(process.env)
 
 const app = express()
+app.get('/health', (_req, res): void => {
+  res.send('ok')
+})
 app.use('/static', express.static(path.join(__dirname, '../static')))
 
 const server = isHttps
