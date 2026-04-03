@@ -9,6 +9,7 @@ import { RawData, WebSocketServer, createWebSocketStream } from 'ws'
 import express from 'express'
 
 import {
+  assertHandshakePayloadSize,
   log,
   parseVLESS,
   closeNetSocket,
@@ -40,7 +41,6 @@ const server = isHttps
   : http.createServer(app)
 const wsServer = new WebSocketServer({
   noServer: true,
-  maxPayload: MAX_HANDSHAKE_PAYLOAD_BYTES,
 })
 
 function toBuffer(data: RawData) {
@@ -67,9 +67,12 @@ wsServer.on('connection', ws => {
   ws.once('message', (msg: RawData) => {
     clearTimeout(handshakeTimeout)
 
+    const payload = toBuffer(msg)
+
     let info: ReturnType<typeof parseVLESS>
     try {
-      info = parseVLESS(toBuffer(msg))
+      assertHandshakePayloadSize(payload, MAX_HANDSHAKE_PAYLOAD_BYTES)
+      info = parseVLESS(payload)
     } catch (error) {
       log('error', error instanceof Error ? error.message : 'Invalid VLESS request')
       ws.close(1008, 'Invalid VLESS request')

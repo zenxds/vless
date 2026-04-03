@@ -2,8 +2,8 @@ import {
   isAllowedUpgradePath,
   isSupportedCommand,
   resolveServerConfig,
-  VlessCommand,
 } from '@/utils'
+import { VlessCommand } from '@/types'
 
 describe('server helpers', () => {
   test('resolveServerConfig normalizes and validates runtime config', () => {

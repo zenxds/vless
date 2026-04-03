@@ -1,4 +1,9 @@
-import { parseVLESS, VlessCommand, VlessProtocolError } from '@/utils'
+import {
+  assertHandshakePayloadSize,
+  parseVLESS,
+  VlessProtocolError,
+} from '@/utils'
+import { VlessCommand } from '@/types'
 
 const TEST_UUID = '123e4567e89b12d3a456426614174000'
 
@@ -46,19 +51,31 @@ describe('parseVLESS', () => {
     })
   })
 
-  test('parses a domain request with addons', () => {
+  test('parses a domain request without addons', () => {
     const domain = Buffer.from('example.com')
     const packet = createVlessPacket({
       addressType: 2,
       address: Buffer.concat([Buffer.from([domain.length]), domain]),
-      addons: Buffer.from([0xde, 0xad]),
       port: 8443,
     })
 
     const parsed = parseVLESS(packet)
     expect(parsed.targetAddress).toBe('example.com')
     expect(parsed.targetPort).toBe(8443)
-    expect(parsed.protoBuf).toEqual(Buffer.from([0xde, 0xad]))
+    expect(parsed.protoBuf).toEqual(Buffer.alloc(0))
+  })
+
+  test('rejects requests with unsupported addons', () => {
+    const domain = Buffer.from('example.com')
+    const packet = createVlessPacket({
+      addressType: 2,
+      address: Buffer.concat([Buffer.from([domain.length]), domain]),
+      addons: Buffer.from([0xde, 0xad]),
+    })
+
+    expect(() => parseVLESS(packet)).toThrow(
+      'Unsupported VLESS addons',
+    )
   })
 
   test('parses an ipv6 request', () => {
@@ -101,5 +118,40 @@ describe('parseVLESS', () => {
     expect(() => parseVLESS(invalidAddressTypePacket)).toThrow(
       'Unsupported address type',
     )
+  })
+
+  test('rejects malformed target destinations', () => {
+    const emptyDomainPacket = createVlessPacket({
+      addressType: 2,
+      address: Buffer.from([0]),
+    })
+
+    expect(() => parseVLESS(emptyDomainPacket)).toThrow(
+      'Domain must not be empty',
+    )
+
+    const zeroPortPacket = createVlessPacket({
+      addressType: 1,
+      address: Buffer.from([127, 0, 0, 1]),
+      port: 0,
+    })
+
+    expect(() => parseVLESS(zeroPortPacket)).toThrow(
+      'Port must be between 1 and 65535',
+    )
+  })
+})
+
+describe('assertHandshakePayloadSize', () => {
+  test('rejects payloads larger than the configured handshake limit', () => {
+    expect(() =>
+      assertHandshakePayloadSize(Buffer.alloc(5), 4),
+    ).toThrow('VLESS handshake payload exceeds 4 bytes')
+  })
+
+  test('accepts payloads at or below the configured handshake limit', () => {
+    expect(() =>
+      assertHandshakePayloadSize(Buffer.alloc(4), 4),
+    ).not.toThrow()
   })
 })

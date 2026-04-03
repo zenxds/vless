@@ -1,36 +1,11 @@
 import net from 'net'
 import stream from 'stream'
-
-export enum VlessCommand {
-  TCP = 1,
-  UDP = 2,
-  MUX = 3,
-}
-
-enum VlessAddressType {
-  IPv4 = 1,
-  Domain = 2,
-  IPv6 = 3,
-}
-
-export interface ParsedVLESSRequest {
-  version: 0
-  uuid: string
-  protoBuf: Buffer
-  command: VlessCommand
-  targetAddress: string
-  targetPort: number
-  data: Buffer
-}
-
-export interface ServerConfig {
-  uuid: string
-  port: number
-  wsPath: string
-  certFile: string
-  keyFile: string
-  isHttps: boolean
-}
+import {
+  ParsedVLESSRequest,
+  ServerConfig,
+  VlessAddressType,
+  VlessCommand,
+} from './types'
 
 export class VlessProtocolError extends Error {
   constructor(message: string) {
@@ -126,6 +101,12 @@ export function isSupportedCommand(command: number): command is VlessCommand.TCP
   return command === VlessCommand.TCP
 }
 
+export function assertHandshakePayloadSize(buffer: Buffer, maxBytes: number) {
+  if (buffer.length > maxBytes) {
+    throw new VlessProtocolError(`VLESS handshake payload exceeds ${maxBytes} bytes`)
+  }
+}
+
 export function parseVLESS(buffer: Buffer): ParsedVLESSRequest {
   let offset = 0
 
@@ -147,12 +128,18 @@ export function parseVLESS(buffer: Buffer): ParsedVLESSRequest {
 
   const protoBuf = readSlice(buffer, offset, protoBufLength, 'addons')
   offset += protoBufLength
+  if (protoBuf.length > 0) {
+    throw new VlessProtocolError('Unsupported VLESS addons')
+  }
 
   const command = readUInt8(buffer, offset, 'command')
   offset += 1
 
   const targetPort = readUInt16BE(buffer, offset, 'port')
   offset += 2
+  if (targetPort < 1 || targetPort > 65535) {
+    throw new VlessProtocolError('Port must be between 1 and 65535')
+  }
 
   const addressType = readUInt8(buffer, offset, 'address type')
   offset += 1
@@ -164,6 +151,9 @@ export function parseVLESS(buffer: Buffer): ParsedVLESSRequest {
   } else if (addressType === VlessAddressType.Domain) {
     const domainLength = readUInt8(buffer, offset, 'domain length')
     offset += 1
+    if (domainLength === 0) {
+      throw new VlessProtocolError('Domain must not be empty')
+    }
     targetAddress = readSlice(buffer, offset, domainLength, 'domain').toString('utf8')
     offset += domainLength
   } else if (addressType === VlessAddressType.IPv6) {

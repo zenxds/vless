@@ -65,6 +65,7 @@ typings/
 
 .idea
 .vscode
+.claude
 .DS_Store
 .yo-rc.json
 package-lock.json
