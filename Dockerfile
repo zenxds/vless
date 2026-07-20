@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:20-bookworm-slim AS build
 
 ENV APP_DIR=/app
 
@@ -10,7 +10,7 @@ RUN yarn install --frozen-lockfile
 COPY src ./src
 RUN yarn compile
 
-FROM node:20-alpine AS runtime
+FROM node:20-bookworm-slim AS runtime
 
 ENV NODE_ENV=production
 ENV APP_DIR=/app
