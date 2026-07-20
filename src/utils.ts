@@ -14,6 +14,13 @@ export class VlessProtocolError extends Error {
   }
 }
 
+export class IncompleteVlessHeaderError extends VlessProtocolError {
+  constructor(message: string) {
+    super(message)
+    this.name = 'IncompleteVlessHeaderError'
+  }
+}
+
 export function log(type: 'log' | 'info' | 'error', ...args: string[]) {
   console[type](`[${new Date().toISOString()}] ${type.toUpperCase()}:`, ...args)
 }
@@ -33,7 +40,9 @@ function ipv6ToString(buffer: Buffer) {
 
 function ensureReadable(buffer: Buffer, offset: number, size: number, field: string) {
   if (offset + size > buffer.length) {
-    throw new VlessProtocolError(`Unexpected end of VLESS header while reading ${field}`)
+    throw new IncompleteVlessHeaderError(
+      `Unexpected end of VLESS header while reading ${field}`,
+    )
   }
 }
 
@@ -58,7 +67,7 @@ export function normalizeUUID(value: string) {
 
 export function resolveServerConfig(env: NodeJS.ProcessEnv): ServerConfig {
   const uuid = normalizeUUID(env.UUID || '')
-  const port = Number(env.PORT || 3000)
+  const port = Number(env.PORT || 19594)
   const wsPath = env.WS_PATH || '/'
   const certFile = env.CERT_FILE || ''
   const keyFile = env.KEY_FILE || ''
@@ -101,17 +110,11 @@ export function isSupportedCommand(command: number): command is VlessCommand.TCP
   return command === VlessCommand.TCP
 }
 
-export function assertHandshakePayloadSize(buffer: Buffer, maxBytes: number) {
-  if (buffer.length > maxBytes) {
-    throw new VlessProtocolError(`VLESS handshake payload exceeds ${maxBytes} bytes`)
-  }
-}
-
 export function parseVLESS(buffer: Buffer): ParsedVLESSRequest {
   let offset = 0
 
   if (buffer.length === 0) {
-    throw new VlessProtocolError('Empty VLESS request')
+    throw new IncompleteVlessHeaderError('Empty VLESS request')
   }
 
   const version = readUInt8(buffer, offset, 'version')
@@ -167,7 +170,7 @@ export function parseVLESS(buffer: Buffer): ParsedVLESSRequest {
     version: 0,
     uuid,
     protoBuf,
-    command: command as VlessCommand,
+    command,
     targetAddress,
     targetPort,
     data: buffer.subarray(offset),

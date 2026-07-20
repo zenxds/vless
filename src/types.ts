@@ -14,7 +14,7 @@ export interface ParsedVLESSRequest {
   version: 0
   uuid: string
   protoBuf: Buffer
-  command: VlessCommand
+  command: number
   targetAddress: string
   targetPort: number
   data: Buffer

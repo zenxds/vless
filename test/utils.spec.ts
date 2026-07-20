@@ -1,5 +1,5 @@
 import {
-  assertHandshakePayloadSize,
+  IncompleteVlessHeaderError,
   parseVLESS,
   VlessProtocolError,
 } from '@/utils'
@@ -93,6 +93,7 @@ describe('parseVLESS', () => {
   test('rejects truncated packets', () => {
     const packet = Buffer.from([0])
     expect(() => parseVLESS(packet)).toThrow(VlessProtocolError)
+    expect(() => parseVLESS(packet)).toThrow(IncompleteVlessHeaderError)
     expect(() => parseVLESS(packet)).toThrow(
       'Unexpected end of VLESS header while reading uuid',
     )
@@ -140,18 +141,14 @@ describe('parseVLESS', () => {
       'Port must be between 1 and 65535',
     )
   })
-})
 
-describe('assertHandshakePayloadSize', () => {
-  test('rejects payloads larger than the configured handshake limit', () => {
-    expect(() =>
-      assertHandshakePayloadSize(Buffer.alloc(5), 4),
-    ).toThrow('VLESS handshake payload exceeds 4 bytes')
-  })
+  test('preserves unknown command bytes for explicit capability checks', () => {
+    const packet = createVlessPacket({
+      addressType: 1,
+      address: Buffer.from([127, 0, 0, 1]),
+    })
+    packet[18] = 99
 
-  test('accepts payloads at or below the configured handshake limit', () => {
-    expect(() =>
-      assertHandshakePayloadSize(Buffer.alloc(4), 4),
-    ).not.toThrow()
+    expect(parseVLESS(packet).command).toBe(99)
   })
 })

@@ -1,7 +1,7 @@
 {
-  "name": "node-lib-boilerplate",
+  "name": "vless-websocket-proxy",
   "version": "0.1.0",
-  "description": "node lib boilerplate",
+  "description": "VLESS over WebSocket TCP proxy",
   "main": "lib/index.js",
   "scripts": {
     "start": "nodemon",
@@ -10,6 +10,8 @@
     "prettier": "prettier src/**/*.ts --write",
     "docker:build": "docker build -t zenxds/vless:latest .",
     "docker:start": "pm2-runtime ecosystem.config.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
     "test": "jest ."
   },
   "husky": {
@@ -53,8 +55,8 @@
   },
   "dependencies": {
     "dotenv": "^16.4.7",
-    "express": "^4.21.2",
-    "pm2": "^5.4.3",
-    "ws": "^8.18.0"
+    "express": "^5.2.1",
+    "pm2": "^7.0.3",
+    "ws": "^8.21.1"
   }
 }

@@ -14,6 +14,7 @@ FROM node:20-alpine AS runtime
 
 ENV NODE_ENV=production
 ENV APP_DIR=/app
+ENV PORT=19594
 
 WORKDIR ${APP_DIR}
 

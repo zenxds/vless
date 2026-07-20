@@ -7,9 +7,7 @@ module.exports = {
       exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
-        // UUID: '',
-        // PORT: 19594,
-        // WS_PATH: '/ws',
+        PORT: process.env.PORT || 19594,
       },
     },
   ],

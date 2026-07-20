@@ -25,6 +25,14 @@ describe('server helpers', () => {
     })
   })
 
+  test('resolveServerConfig uses the Docker-exposed port by default', () => {
+    expect(
+      resolveServerConfig({
+        UUID: '123e4567-e89b-12d3-a456-426614174000',
+      }).port,
+    ).toBe(19594)
+  })
+
   test('resolveServerConfig rejects invalid runtime config', () => {
     expect(() =>
       resolveServerConfig({
